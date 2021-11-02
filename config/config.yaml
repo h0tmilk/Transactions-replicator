@@ -1,3 +1,8 @@
 ---
 airdrop_autofarmer:
   - accounts_folder: ../accounts
+
+blockchains:
+  - name: ropsten
+    uri: https://ropsten.infura.io/v3/6eacb828d63246bb85f6104f0312c402
+    type: HTTPProvider
