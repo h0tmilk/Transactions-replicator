@@ -3,7 +3,7 @@ from coincurve import PublicKey
 from sha3 import keccak_256
 import os
 
-ACCOUNTS_FOLDER = './Accounts/'
+ACCOUNTS_FOLDER = './accounts/'
 
 private_key = keccak_256(token_bytes(32)).digest()
 public_key = PublicKey.from_valid_secret(private_key).format(compressed=False)[1:]
