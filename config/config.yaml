@@ -1,19 +1,16 @@
 ---
-airdrop_autofarmer:
-  - accounts_folder: ../accounts
-
 blockchains:
-  - name: ethereum ropsten
+  - name: ethereum_ropsten
     type: testnet
     uri: https://ropsten.infura.io/v3/6eacb828d63246bb85f6104f0312c402
     web3: HTTPProvider
 
-  - name: polygon mumbai
+  - name: polygon_mumbai
     type: testnet
     uri: https://polygon-mumbai.infura.io/v3/6eacb828d63246bb85f6104f0312c402
     web3: HTTPProvider
 
-  - name: arbitrum rinkeby
+  - name: arbitrum_rinkeby
     type: testnet
     uri: https://arbitrum-rinkeby.infura.io/v3/6eacb828d63246bb85f6104f0312c402
     web3: HTTPProvider
