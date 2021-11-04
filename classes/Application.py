@@ -1,5 +1,8 @@
+import json
 import os
 import eth_keyfile
+import secrets
+from sha3 import keccak_256
 
 from classes.Config import Config
 
@@ -10,9 +13,14 @@ class Application:
         self.conf = Config(config_path)
 
     def create_accounts(self, number, path, password):
-        # TODO
-        # eth_keyfile.create_keyfile_json(self.conf.accounts_folder)
-        pass
+        for x in range(number):
+            private_key = keccak_256(secrets.token_bytes(32)).digest()
+            keyfile_content = eth_keyfile.create_keyfile_json(private_key, password.encode())
+            address = keyfile_content["address"]
+
+            keyfile = open(path + "/keyfile_" + address[:5], "w")
+            keyfile.write(json.dumps(keyfile_content, indent=4))
+            keyfile.close()
 
     def load_accounts(self, path):
         for x in os.walk(self.conf.accounts_folder):

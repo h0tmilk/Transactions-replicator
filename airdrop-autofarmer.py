@@ -41,10 +41,10 @@ if __name__ == "__main__":
     application = Application("./config/config.yaml")
 
     args = parser.parse_args()
-    if args.subcommand == 'create_accounts':
+    if args.function == 'create_accounts':
         if not args.password:
             try:
-                password = getpass.getpass(prompt='Enter a password for keyfiles: ')
+                password = getpass(prompt='Enter a password for keyfiles: ')
                 application.create_accounts(args.number, args.directory, password)
             except Exception as error:
                 print('ERROR', error)
@@ -56,7 +56,3 @@ if __name__ == "__main__":
 
     elif args.subcommand == 'farm':
         application.farm(args.password, args.playbook, args.blockchains.split(','), args.keys_dir)
-
-    # application = Application("./config/config.yaml")
-    # application.create_accounts()
-    # application.load_accounts()
