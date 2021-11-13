@@ -13,9 +13,32 @@ from eth_keyfile import load_keyfile
 from sha3 import keccak_256
 
 from web3 import Web3
-from web3.gas_strategies.time_based import medium_gas_price_strategy
+from termcolor import colored
 
 from classes.Config import Config
+
+
+def confirmation(label, default="yes"):
+    valid = {"yes": True, "y": True, "Y": True,
+             "no": False, "n": False, "N": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(label + prompt)
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Invalid input\n")
 
 
 class Application:
@@ -24,28 +47,6 @@ class Application:
         self.conf = Config(config_path)
         self.accounts_path = accounts_path
         self.accounts = {}
-
-    def confirmation(self, label, default="yes"):
-        valid = {"yes": True, "y": True, "Y": True,
-                 "no": False, "n": False, "N": False}
-        if default is None:
-            prompt = " [y/n] "
-        elif default == "yes":
-            prompt = " [Y/n] "
-        elif default == "no":
-            prompt = " [y/N] "
-        else:
-            raise ValueError("invalid default answer: '%s'" % default)
-
-        while True:
-            sys.stdout.write(label + prompt)
-            choice = input().lower()
-            if default is not None and choice == '':
-                return valid[default]
-            elif choice in valid:
-                return valid[choice]
-            else:
-                sys.stdout.write("Invalid input\n")
 
     def create_accounts(self, number, path, password):
         for x in range(number):
@@ -61,17 +62,17 @@ class Application:
         for keyfile in os.listdir(self.accounts_path):
             keyfile_json = load_keyfile(self.accounts_path + keyfile)
             try:
-                self.accounts["0x" + keyfile_json['address']] = \
-                    eth_keyfile.decode_keyfile_json(keyfile_json, password.encode())
+                self.accounts['0x' + keyfile_json['address'].lower()] = \
+                    eth_keyfile.decode_keyfile_json(keyfile_json, password.encode()).hex()
             except ValueError:
-                raise ValueError("Incorrect password.")
+                raise ValueError("{} Incorrect password.".format(colored('[ERROR]', 'red')))
 
     def load_web3(self, blockchain):
         return Web3(Web3.HTTPProvider(self.conf.blockchains[blockchain]['web3_uri']))
 
     def get_gas_oracle(self, blockchain):
-        url_api = self.conf.blockchains[blockchain]['explorer-api']
-        api_key = os.environ[self.conf.blockchains[blockchain]['api-token']]
+        url_api = self.conf.blockchains[blockchain]['api_url'] + "api"
+        api_key = os.environ[self.conf.blockchains[blockchain]['api_token']]
         query = {
             'module': 'gastracker',
             'action': 'gasoracle',
@@ -87,7 +88,7 @@ class Application:
 
     def extract_transactions_from_address(self, address, blockchain):
         for current_blockchain in blockchain:
-            url_api = self.conf.blockchains[current_blockchain]['explorer-api']
+            url_api = self.conf.blockchains[current_blockchain]['api_url']
             api_key = os.environ[self.conf.blockchains[current_blockchain]['api-token']]
             query = {
                 'module': 'account',
@@ -127,17 +128,75 @@ class Application:
         from_address = web3.toChecksumAddress(from_address)
 
         if from_address.lower() not in self.accounts:
-            raise ValueError(from_address + " is not in " + self.accounts_path + ".")
+            raise ValueError('{} {} is not in {}.'.format(
+                colored('[ERROR]', 'red'),
+                from_address,
+                self.accounts_path
+            ))
 
         nb_dest_addresses = len(self.accounts) - 1
+        total_amount = str(nb_dest_addresses * amount)
 
-        self.confirmation(str(nb_dest_addresses * amount) + " " + self.conf.blockchains[blockchain]['symbol'] +
-                          " will be sent to " + str(nb_dest_addresses) + " addresse(s). Confirm ?", 'no')
+        confirm = confirmation('{} {} {} will be sent to {} addresse(s)'.format(
+            colored('[CONFIRM]', 'blue'),
+            str(total_amount),
+            self.conf.blockchains[blockchain]['symbol'],
+            str(nb_dest_addresses)
+        ), 'no')
+        if not confirm:
+            sys.exit('Cancelled')
 
-        if web3.eth.get_balance(from_address) <= amount:
-            raise ValueError('Address ' + from_address + ' has only ' + self.conf.blockchains[blockchain]['symbol']
-                             + ' and the operation needs at least ' + amount + ' '
-                             + self.conf.blockchains[blockchain]['symbol'])
+        balance = web3.fromWei(web3.eth.get_balance(from_address), "ether")
+        if balance <= amount:
+            raise ValueError('{} Address {} has only {} {} and the operation needs at least {} {}'.format(
+                colored('[ERROR]', red),
+                from_address,
+                str(balance),
+                self.conf.blockchains[blockchain]['symbol'],
+                str(total_amount),
+                self.conf.blockchains[blockchain]['symbol']
+            ))
 
-        gas_oracle = self.get_gas_oracle(blockchain)
-        #TODO send transactions
+        gas_station = self.get_gas_oracle(blockchain)
+        price = gas_station['SafeGasPrice']
+
+        # Estimated gas fees with minimal transaction and then multiply by the amount of dest addresses
+        tx = {
+            'to': '0x0000000000000000000000000000000000007357',  # random address
+            'value': web3.toWei(amount, 'ether')
+        }
+        estimated_gas = web3.eth.estimate_gas(tx)
+        estimated_fees = round(estimated_gas * float(web3.fromWei(web3.toWei(price, 'gwei'), 'ether')), 5)
+        estimated_total_fees = estimated_fees * nb_dest_addresses
+
+        confirm = confirmation('{} The estimated total gas fees for the operation(s) is estimated at {} {}'.format(
+            colored('[CONFIRM]', 'blue'), str(estimated_total_fees), str(self.conf.blockchains[blockchain]['symbol'])),
+            'no')
+
+        if not confirm:
+            sys.exit('Cancelled')
+
+        private_key = self.accounts[from_address.lower()]
+        nonce = web3.eth.getTransactionCount(from_address)
+
+        for address, key in self.accounts.items():
+            if address != from_address.lower():
+                tx = {
+                    'nonce': nonce,
+                    'to': web3.toChecksumAddress(address),
+                    'value': web3.toWei(amount, 'ether'),
+                    'gas': estimated_gas,
+                    'gasPrice': web3.toWei(price, 'gwei')
+                }
+                signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                nonce += 1
+                print('{} {} ----- {}{} -----> {} : {}tx/{}'.format(
+                    colored('[TX]', 'green'),
+                    from_address[:8],
+                    str(amount),
+                    str(self.conf.blockchains[blockchain]['symbol']),
+                    address[:8],
+                    self.conf.blockchains[blockchain]['api_url'].replace('api-', ''),
+                    str(tx_hash.hex())))
+
