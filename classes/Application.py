@@ -149,7 +149,7 @@ class Application:
         balance = web3.fromWei(web3.eth.get_balance(from_address), "ether")
         if balance <= amount:
             raise ValueError('{} Address {} has only {} {} and the operation needs at least {} {}'.format(
-                colored('[ERROR]', red),
+                colored('[ERROR]', 'red'),
                 from_address,
                 str(balance),
                 self.conf.blockchains[blockchain]['symbol'],
