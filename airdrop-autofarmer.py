@@ -73,4 +73,4 @@ if __name__ == "__main__":
 
     elif args.function == 'farm':
         application = Application(CONFIG_PATH, args.keys_dir)
-        application.farm(args.password, args.playbook, args.blockchains.split(','), args.keys_dir)
+        application.farm(args.password, args.playbook, args.blockchains.split(','))

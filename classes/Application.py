@@ -2,8 +2,8 @@ import json
 import os
 import sys
 
+import requests_cache
 import yaml
-from colorama import Fore, Back, Style
 
 import eth_keyfile
 import secrets
@@ -47,6 +47,8 @@ class Application:
         self.conf = Config(config_path)
         self.accounts_path = accounts_path
         self.accounts = {}
+        self.transactions = {}
+        requests_cache.install_cache("API_CACHE", backend="sqlite", expire_after=60)
 
     def create_accounts(self, number, path, password):
         for x in range(number):
@@ -86,10 +88,32 @@ class Application:
 
         return response['result']
 
-    def extract_transactions_from_address(self, address, blockchain):
-        for current_blockchain in blockchain:
-            url_api = self.conf.blockchains[current_blockchain]['api_url']
-            api_key = os.environ[self.conf.blockchains[current_blockchain]['api-token']]
+    def estimate_tx_fees(self, web3, blockchain, transaction, address_from):
+        tx = {
+            'from': web3.toChecksumAddress(address_from),
+            'to': web3.toChecksumAddress(transaction['to']),
+            'value': transaction['value'],
+            'input': transaction['input']
+        }
+
+        gas_station = self.get_gas_oracle(blockchain)
+        price = gas_station['SafeGasPrice']
+
+        estimated_gas = web3.eth.estimate_gas(tx)
+        estimated_fees = round(estimated_gas * float(web3.fromWei(web3.toWei(price, 'gwei'), 'ether')), 5)
+
+        return {
+            'estimated_gas': estimated_gas,
+            'estimated_fees': estimated_fees,
+            'price': price
+        }
+
+    def extract_transactions_from_address(self, address, blockchains):
+        playbook = {}
+        playbook_filename = 'playbooks/playbook_{}.yaml'.format(address[:8])
+        for current_blockchain in blockchains:
+            url_api = self.conf.blockchains[current_blockchain]['api_url'] + 'api'
+            api_key = os.environ[self.conf.blockchains[current_blockchain]['api_token']]
             query = {
                 'module': 'account',
                 'action': 'txlist',
@@ -105,21 +129,70 @@ class Application:
             }
             response = json.loads(requests.get(url_api, headers=headers, params=query).text)
 
-            transactions = {}
+            playbook[current_blockchain] = list()
             for transaction in response["result"]:
                 if transaction["from"].lower() == address.lower():
-                    transactions[transaction["hash"]] = transaction
+                    playbook[current_blockchain].append(transaction['hash'])
+                    print('{} Written {} transactions on {} in {}'.format(
+                        colored('[INFO]', 'magenta'),
+                        address[:8],
+                        current_blockchain,
+                        playbook_filename
+                    ))
 
-            playbook_file = open("playbooks/playbook_" + current_blockchain + "_" + address[2:8] + ".yaml", "w")
-            playbook_file.write(yaml.dump(transactions))
-            playbook_file.close()
+        playbook_file = open(playbook_filename, "w")
+        playbook_file.write(yaml.dump(playbook))
+        playbook_file.close()
 
-    def replicate_transaction(self, transaction_hash, account):
-        # TODO
-        pass
+    def load_transactions(self, playbook):
+        with open(playbook, "r") as stream:
+            try:
+                parsed_playbook = yaml.safe_load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+        for blockchain in parsed_playbook:
+            web3 = self.load_web3(blockchain)
+            self.transactions[blockchain] = {}
+            for transaction_hash in parsed_playbook[blockchain]:
+                self.transactions[blockchain][transaction_hash] = web3.eth.get_transaction(transaction_hash)
 
-    def farm(self, password, playbook, param, keys_dir):
+    def farm(self, password, playbook, blockchains):
         self.load_accounts(password)
+        self.load_transactions(playbook)
+
+        for blockchain in blockchains:
+            # Calculate fees
+            web3 = self.load_web3(blockchain)
+            total_fees = 0
+            total_tx = 0
+            for tx_hash, tx in self.transactions[blockchain].items():
+                # Estimate total fees
+                test_address = list(self.accounts.keys())[0] \
+                    if web3.toChecksumAddress(list(self.accounts.keys())[0]) != tx['from'] \
+                    else web3.toChecksumAddress(self.accounts[1])
+                fees = self.estimate_tx_fees(web3, blockchain, tx, test_address)
+                for address, private_key in self.accounts.items():
+                    if web3.toChecksumAddress(address) != web3.toChecksumAddress(tx['from']):
+                        total_fees += total_fees + fees['estimated_fees']
+                        total_tx += 1
+
+                confirm = confirmation('{} Replicate transaction {} on {} accounts for {} {} fees ({} {} each)'.format(
+                    colored('[CONFIRM]', 'blue'),
+                    str(tx_hash),
+                    str(total_tx),
+                    str(total_fees)[:7],
+                    str(self.conf.blockchains[blockchain]['symbol']),
+                    str(total_fees / total_tx)[:7],
+                    str(self.conf.blockchains[blockchain]['symbol'])),
+                    'no')
+
+                if not confirm:
+                    print('{} Skipped transaction {}.'.format(colored('[INFO]', 'magenta'), tx_hash))
+                else:
+                    # Then we go through the accounts to perform the transactions
+                    for address in self.accounts:
+                        if web3.toChecksumAddress(address) != web3.toChecksumAddress(tx['from']):
+                            self.replicate_transaction(web3, blockchain, tx, address)
 
     def dispatch_currency(self, amount, from_address, blockchain, password):
         web3 = self.load_web3(blockchain)
@@ -191,7 +264,7 @@ class Application:
                 signed_tx = web3.eth.account.sign_transaction(tx, private_key)
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
                 nonce += 1
-                print('{} {} ----- {}{} -----> {} : {}tx/{}'.format(
+                print('{} {} ----- {} {} -----> {} : {}tx/{}'.format(
                     colored('[TX]', 'green'),
                     from_address[:8],
                     str(amount),
@@ -199,4 +272,30 @@ class Application:
                     address[:8],
                     self.conf.blockchains[blockchain]['api_url'].replace('api-', ''),
                     str(tx_hash.hex())))
+
+    def replicate_transaction(self, web3, blockchain, tx, address):
+        private_key = self.accounts[address.lower()]
+        nonce = web3.eth.getTransactionCount(web3.toChecksumAddress(address))
+        fees = self.estimate_tx_fees(web3, blockchain, tx, address)
+
+        transaction = {
+            'nonce': nonce,
+            'from': web3.toChecksumAddress(address),
+            'to': tx['to'],
+            'value': tx['value'],
+            'data': tx['input'],
+            'gas': fees['estimated_gas'],
+            'gasPrice': web3.toWei(fees['price'], 'gwei')
+        }
+
+        signed_tx = web3.eth.account.sign_transaction(transaction, private_key)
+        tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        print('{} Replicated transaction {} on {}: {}{}'.format(
+            colored('[TX]', 'green'),
+            str(tx['hash'].hex()),
+            address[:8],
+            self.conf.blockchains[blockchain]['api_url'].replace('api-', '')+'tx/',
+            str(tx_hash.hex())))
+
 
