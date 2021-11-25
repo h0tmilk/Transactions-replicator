@@ -1,0 +1,29 @@
+---
+blockchains:
+  ethereum_mainnet:
+      type: mainnet
+      web3_uri: https://mainnet.infura.io/v3/<infura_token>
+      explorer-api: https://etherscan.io/api
+      api-token: ETH_ROP_TOKEN # Name of the env variable containing the token
+      symbol: ETH
+
+  ethereum_ropsten:
+      type: testnet
+      web3_uri: https://ropsten.infura.io/v3/<infura_token>
+      explorer-api: https://api-ropsten.etherscan.io/api
+      api-token: ETH_ROP_TOKEN # Name of the env variable containing the token
+      symbol: ETH
+
+  polygon_mumbai:
+      type: testnet
+      web3_uri: https://polygon-mumbai.infura.io/v3/<infura_token>
+      explorer-api: https://api-testnet.polygonscan.com/api
+      api-token: POLY_MUM_TOKEN # Name of the env variable containing the token
+      symbol: MATIC
+
+  arbitrum_rinkeby:
+      type: testnet
+      web3_uri: https://arbitrum-rinkeby.infura.io/v3/<infura_token>
+      explorer-api: https://api-testnet.arbiscan.io/api
+      api-token: ARB_RINK_TOKEN # Name of the env variable containing the token
+      symbol: ETH
