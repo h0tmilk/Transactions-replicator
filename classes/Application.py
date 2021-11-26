@@ -112,7 +112,7 @@ class Application:
         playbook = {}
         playbook_filename = 'playbooks/playbook_{}.yaml'.format(address[:8])
         for current_blockchain in blockchains:
-            url_api = self.conf.blockchains[current_blockchain]['api_url'] + 'api'
+            url_api = self.conf.blockchains[current_blockchain]['api_url']
             api_key = os.environ[self.conf.blockchains[current_blockchain]['api_token']]
             query = {
                 'module': 'account',
@@ -130,15 +130,22 @@ class Application:
             response = json.loads(requests.get(url_api, headers=headers, params=query).text)
 
             playbook[current_blockchain] = list()
+            nb_tx = 0
             for transaction in response["result"]:
-                if transaction["from"].lower() == address.lower():
-                    playbook[current_blockchain].append(transaction['hash'])
-                    print('{} Written {} transactions on {} in {}'.format(
-                        colored('[INFO]', 'magenta'),
-                        address[:8],
-                        current_blockchain,
-                        playbook_filename
-                    ))
+                if transaction["from"].lower() == address.lower() and transaction["isError"] == '0':
+                    nb_tx += 1
+                    playbook[current_blockchain].append({'hash': transaction['hash'],
+                                                        'timestamp': transaction["timeStamp"]})
+            print('{} Written {} transactions on {} in {}'.format(
+                colored('[INFO]', 'magenta'),
+                nb_tx,
+                current_blockchain,
+                playbook_filename
+            ))
+
+            # Sort dict by timestamp
+            sorted(playbook[current_blockchain], key=lambda d: d['timestamp'])
+            playbook[current_blockchain] = [d['hash'] for d in playbook[current_blockchain]]
 
         playbook_file = open(playbook_filename, "w")
         playbook_file.write(yaml.dump(playbook))
