@@ -163,7 +163,7 @@ class Application:
             for transaction_hash in parsed_playbook[blockchain]:
                 self.transactions[blockchain][transaction_hash] = web3.eth.get_transaction(transaction_hash)
 
-    def farm(self, password, playbook, blockchains):
+    def replicate(self, password, playbook, blockchains):
         self.load_accounts(password)
         self.load_transactions(playbook)
 
