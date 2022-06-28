@@ -1,4 +1,4 @@
-# Transactions replicator (EVM-compatible chains))
+# Transactions replicator (EVM-compatible chains)
 Python tool to replicate transactions from a given address on any web3 compatible network. This can be used for example to farm 
 existing transactions on tokenless Dapps to hunt for airdrops.
 
