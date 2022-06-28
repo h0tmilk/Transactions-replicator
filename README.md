@@ -1,5 +1,5 @@
-# Airdrops-autofarmer
-Python tool to replicate transactions from a given address on any web3 compatible network. This can be used to farm 
+# Transactions replicator (EVM-compatible chains))
+Python tool to replicate transactions from a given address on any web3 compatible network. This can be used for example to farm 
 existing transactions on tokenless Dapps to hunt for airdrops.
 
 **This tool is working but is still in development. Use with caution.**
@@ -94,12 +94,12 @@ Example (send 2 ethers from 0x56469 to all the addresses stored in the *./accoun
 python airdrop-autofarmer.py dispatch_currency -a 2 -b ethereum_ropsten -f 0x56469f4af31ad9d9401316a34b3b1a01cfb1b321 -p "password" -k ./accounts
 ```
 
-### Farm
-Once your accounts have enough cryptos, you can use the *farm* module to copy the transactions from the generated playbook of your choice (see *extract_transactions*) with all the accounts from the keystore folder.
+### Replicate
+Once your accounts have enough cryptos, you can use the *replicate* module to copy the transactions from the generated playbook of your choice (see *extract_transactions*) with all the accounts from the keystore folder.
 
 Usage :
 ```bash
-airdrop-autofarmer.py farm [-h] -p PASSWORD -b BLOCKCHAINS -P PLAYBOOK [-k KEYS_DIR]
+airdrop-autofarmer.py replicate [-h] -p PASSWORD -b BLOCKCHAINS -P PLAYBOOK [-k KEYS_DIR]
 
 optional arguments:
   -h, --help            show this help message and exit
