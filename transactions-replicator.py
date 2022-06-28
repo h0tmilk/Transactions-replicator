@@ -40,15 +40,15 @@ if __name__ == "__main__":
                                              required=True)
 
     # Replicate parser
-    farm = subparsers.add_parser('replicate')
-    farm.add_argument('-p', '--password', help='Password of keyfiles.', required=True)
-    farm.add_argument('-b', '--blockchains',
+    replicate = subparsers.add_parser('replicate')
+    replicate.add_argument('-p', '--password', help='Password of keyfiles.', required=True)
+    replicate.add_argument('-b', '--blockchains',
                                              help='Blockchain names from which transactions have to be extracted '
                                                   '(see config file), separated by commas.',
                                              required=True)
-    farm.add_argument('-P', '--playbook', help='Playbook file containing transactions and blockchains (generated with '
+    replicate.add_argument('-P', '--playbook', help='Playbook file containing transactions and blockchains (generated with '
                                                'extract_transactions function.', required=True)
-    farm.add_argument('-k', '--keys_dir', help='Directory where keyfiles are located.',
+    replicate.add_argument('-k', '--keys_dir', help='Directory where keyfiles are located.',
                                         default='./accounts/')
 
     args = parser.parse_args()
@@ -73,4 +73,4 @@ if __name__ == "__main__":
 
     elif args.function == 'replicate':
         application = Application(CONFIG_PATH, args.keys_dir)
-        application.farm(args.password, args.playbook, args.blockchains.split(','))
+        application.replicate(args.password, args.playbook, args.blockchains.split(','))
