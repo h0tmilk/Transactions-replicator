@@ -39,8 +39,8 @@ if __name__ == "__main__":
                                                   '(see config file), separated by commas.',
                                              required=True)
 
-    # Farm parser
-    farm = subparsers.add_parser('farm')
+    # Replicate parser
+    farm = subparsers.add_parser('replicate')
     farm.add_argument('-p', '--password', help='Password of keyfiles.', required=True)
     farm.add_argument('-b', '--blockchains',
                                              help='Blockchain names from which transactions have to be extracted '
@@ -71,6 +71,6 @@ if __name__ == "__main__":
         application = Application(CONFIG_PATH, args.keys_dir)
         application.dispatch_currency(args.amount, args.from_address, args.blockchain, args.password)
 
-    elif args.function == 'farm':
+    elif args.function == 'replicate':
         application = Application(CONFIG_PATH, args.keys_dir)
         application.farm(args.password, args.playbook, args.blockchains.split(','))
