@@ -26,7 +26,7 @@ You can create several accounts (json keystore files ptected by password) with t
 
 Usage :
 ```bash
-airdrop-autofarmer.py create_accounts [-h] -n NUMBER [-p PASSWORD] [-d DIRECTORY]
+transactions-replicator.py create_accounts [-h] -n NUMBER [-p PASSWORD] [-d DIRECTORY]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -41,7 +41,7 @@ optional arguments:
 
 Exemple :
 ```bash
-python airdrop-autofarmer.py create_accounts -n 5 -d ./accounts -p 'password'
+python transactions-replicator.py create_accounts -n 5 -d ./accounts -p 'password'
 ```
 
 ### Extract transactions from address
@@ -50,7 +50,7 @@ You can do it with the *extract_transactions* module.
 
 Usage :
 ````bash
-airdrop-autofarmer.py extract_transactions [-h] -a ADDRESS -b BLOCKCHAINS
+transactions-replicator.py extract_transactions [-h] -a ADDRESS -b BLOCKCHAINS
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -64,7 +64,7 @@ optional arguments:
 
 Example :
 ```bash
-python airdrop-autofarmer.py extract_transactions -a 0x50Dd138D8E6829C880BCf17BA78D701678608bE1 -b polygon_mainnet
+python transactions-replicator.py extract_transactions -a 0x50Dd138D8E6829C880BCf17BA78D701678608bE1 -b polygon_mainnet
 ```
 
 ### Send crypto to several accounts
@@ -73,7 +73,7 @@ The sender address must have its keyfile in the keyfiles folder.
 
 Usage :
 ```bash
-airdrop-autofarmer.py dispatch_currency [-h] -a AMOUNT -f FROM_ADDRESS -b BLOCKCHAIN -p PASSWORD [-k KEYS_DIR]
+transactions-replicator.py dispatch_currency [-h] -a AMOUNT -f FROM_ADDRESS -b BLOCKCHAIN -p PASSWORD [-k KEYS_DIR]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -91,7 +91,7 @@ optional arguments:
 
 Example (send 2 ethers from 0x56469 to all the addresses stored in the *./accounts* folder) :
 ```bash
-python airdrop-autofarmer.py dispatch_currency -a 2 -b ethereum_ropsten -f 0x56469f4af31ad9d9401316a34b3b1a01cfb1b321 -p "password" -k ./accounts
+python transactions-replicator.py dispatch_currency -a 2 -b ethereum_ropsten -f 0x56469f4af31ad9d9401316a34b3b1a01cfb1b321 -p "password" -k ./accounts
 ```
 
 ### Replicate
@@ -99,7 +99,7 @@ Once your accounts have enough cryptos, you can use the *replicate* module to co
 
 Usage :
 ```bash
-airdrop-autofarmer.py replicate [-h] -p PASSWORD -b BLOCKCHAINS -P PLAYBOOK [-k KEYS_DIR]
+transactions-replicator.py replicate [-h] -p PASSWORD -b BLOCKCHAINS -P PLAYBOOK [-k KEYS_DIR]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -115,5 +115,5 @@ optional arguments:
 
 Example :
 ```bash
-python airdrop-autofarmer.py farm -p "password" -b ethereum_ropsten -P ./playbooks/playbook_0xd98A4e.yaml -f 0x56469f4af31ad9d9401316a34b3b1a01cfb1b321
+python transactions-replicator.py farm -p "password" -b ethereum_ropsten -P ./playbooks/playbook_0xd98A4e.yaml -f 0x56469f4af31ad9d9401316a34b3b1a01cfb1b321
 ```

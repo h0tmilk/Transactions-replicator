@@ -1,9 +1,0 @@
-﻿
-PyYAML~=6.0
-termcolor~=2.1.1
-requests~=2.26.0
-requests_cache~=2.28.1
-eth_keyfile
-sha3
-web3
-pysha3

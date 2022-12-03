@@ -2,3 +2,4 @@
 accounts
 playbooks
 API_CACHE.sqlite
+__pycache__

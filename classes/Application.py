@@ -49,7 +49,8 @@ class Application:
         self.accounts = {}
         self.transactions = {}
         requests_cache.install_cache("API_CACHE", backend="sqlite", expire_after=60)
-
+        os.makedirs(accounts_path, mode=0o777, exist_ok=False)
+        
     def create_accounts(self, number, path, password):
         for x in range(number):
             private_key = keccak_256(secrets.token_bytes(32)).digest()
@@ -304,5 +305,4 @@ class Application:
             address[:8],
             self.conf.blockchains[blockchain]['api_url'].replace('api-', '')+'tx/',
             str(tx_hash.hex())))
-
 
